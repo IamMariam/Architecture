@@ -1,0 +1,1221 @@
+module RAM(addr,write_data,memread,memwrite,read_data,CS); 
+  input wire [2:0] addr;
+  input wire [31:0] write_data;
+  input wire memwrite, memread;
+  output reg [31:0] read_data;
+  input CS;
+  
+  reg[31:0] rom[7:0];
+  
+  integer i;
+  always @(negedge CS)
+    begin
+      if(memwrite==1'b1)
+        rom[addr]<=write_data;
+      else
+        read_data=rom[addr];
+        
+    end  
+  
+endmodule
+
+module RAMtest();
+
+endmodule
+///////////////////////////////////////
+module instructionMemory(
+  input [2:0] address,
+  output reg [31:0] data,
+  input CS
+);
+
+  reg [31:0] memory [0:7];
+ integer i;
+    // Initialize the ROM contents
+
+  always @(negedge CS)
+    begin
+      for(i=0;i<8;i=i+1)
+        memory[i] = i;
+      
+      data = memory[address];
+    end
+endmodule
+///////////////////////////////////////////////////
+module testbench;
+reg[2:0] address;
+reg CS;
+wire[31:0] out;
+always #1 CS=~CS;
+instructionMemory BB(address, out,CS) ; 
+initial
+begin
+CS=0;
+address=0;
+#1 //output in hex
+  $display("address = %d " ,address,"OUT= %h",out);
+address=6;
+#2 //output in hex
+  $display("address = %d " ,address,"OUT= %d",out);
+address=1;
+#3 //output in binary
+  $display("address = %d " ,address,"OUT= %d ",out);
+address=2;
+#4 //output in decimal
+  $display("address = %d " ,address,"OUT= %d ",out);
+address=7;
+#5  //output in decimal
+  $display("address = %d " ,address,"OUT= %d ",out);
+address=5;
+#6  //output in decimal
+  $display("address = %d " ,address,"OUT= %d ",out);
+  
+end
+endmodule
+    
+///////////////////////////////////////
+
+module PCADDER (PCin,PCout,CS);
+  input [2:0] PCin;
+  output reg [2:0] PCout;
+  input CS;
+  always @(negedge CS)
+    begin
+      PCout = PCin + 3'b001 ;
+    end
+  
+endmodule
+/////////////////////////////////
+/*
+module PCADDERtb();
+  reg CS;
+  reg [2:0] PCin_;
+  wire [2:0] PCout_;
+  always #1 CS =~CS;
+  PCADDER pc(PCin_,PCout_,CS);
+  
+  initial 
+  begin
+  CS=0;
+    PCin_=3'b000;
+    #5
+    $display("pc in= %b",PCin_);
+    #5
+    $display("pc out= %b\n",PCout_);
+        PCin_ = PCout_;
+         #5
+    $display("pc in= %b",PCin_);
+    #5
+    $display("pc out= %b\n",PCout_);
+        PCin_ = PCout_;
+         #5
+    $display("pc in= %b",PCin_);
+    #5
+    $display("pc out= %b\n",PCout_);
+        PCin_ = PCout_;
+         #5
+    $display("pc in= %b",PCin_);
+    #5
+    $display("pc out= %b\n",PCout_);
+        PCin_ = PCout_;
+        #5
+    $display("pc in= %b",PCin_);
+    #5
+    $display("pc out= %b\n",PCout_);
+        PCin_ = PCout_;
+         #5
+    $display("pc in= %b",PCin_);
+    #5
+    $display("pc out= %b\n",PCout_);
+        PCin_ = PCout_;
+         #5
+    $display("pc in= %b",PCin_);
+    #5
+    $display("pc out= %b\n",PCout_);
+     PCin_ = PCout_;
+         #5
+    $display("pc in= %b",PCin_);
+    #5
+    $display("pc out= %b\n",PCout_);
+  end
+endmodule*/
+///////////////////////////////////////
+module InstructionSeperatore(instruction, rs1, rs2,
+                                    rd, opcode, imm,CS);
+  input [31:0] instruction;
+  output reg [2:0] rs1;
+  output reg [2:0] rs2;
+  output reg [2:0] rd;
+  output reg [2:0] opcode;
+  output reg [2:0] imm;
+  input CS;
+  
+  always @(negedge CS)
+    begin
+    opcode = instruction[2:0];
+    rs1 = instruction[5:3];
+    rs2 = instruction[8:6];
+    rd = instruction[11:9];
+    imm = instruction[5:3];
+    end
+endmodule
+////////////////////////////////////////
+/*
+module IStestbench();
+  reg [31:0] instruction;
+  wire [2:0] rs1;
+  wire [2:0] rs2;
+  wire [2:0] rd;
+  wire [2:0] opcode;
+  wire [2:0] imm;
+  reg CS;
+always #1 CS =~CS;
+  InstructionSeperatore testest(instruction, rs1, 
+                                    rs2, rd, opcode, imm, CS);
+  initial begin
+  CS = 0;
+  instruction = 32'b00000111000111000111100111010111;
+  #5;
+   $display(" opcode = %d ",opcode,"rs1 = %d " ,rs1,"rs2 = %d "
+                ,rs2,"rd = %d",rd);
+ 
+  end
+ endmodule
+*/
+/////////////////////////////////////////
+module Comparator(opcode , rs1 , rs2 , result , CS);
+input[2:0]opcode;
+input [2:0]rs1;
+input [2:0]rs2;
+output reg result;
+input CS;
+
+always@(negedge CS)
+ begin
+    if(rs1 >= rs2 & opcode==3'b001) result = 1; 
+    else result = 0 ;
+ end
+endmodule
+/////////////////////////////////////////
+/*
+module ComparatorTest();
+reg[2:0]opcode;
+reg [2:0]rs1;
+reg [2:0]rs2;
+wire result;
+reg CS;
+
+always #1 CS =~CS;
+Comparator Trying(opcode , rs1 , rs2 , result , CS);
+
+initial begin
+  CS = 0;
+rs1 = 3'b001;
+rs2 = 3'b110;
+opcode = 3'b001;
+#5 // rs2 > rs1
+$display(" opcode = %b ",opcode,"rs1 = %d " ,rs1,"rs2 = %d "
+                ,rs2,"result = %d",result);
+rs1 = 3'b011;
+rs2 = 3'b000;
+opcode = 3'b001;
+#5 // rs1 > rs2
+$display("opcode = %b ",opcode,"rs1 = %d " ,rs1,"rs2 = %d "
+                ,rs2,"result = %d",result);
+rs1 = 3'b011;
+rs2 = 3'b110;
+opcode = 3'b000;
+#5 // addition
+$display("opcode = %b ",opcode,"rs1 = %d " ,rs1,"rs2 = %d "
+                ,rs2,"result = %d",result);
+rs1 = 3'b110;
+rs2 = 3'b110;
+opcode = 3'b001;
+#5 // rs1 = r2
+$display("opcode = %b ",opcode,"rs1 = %d " ,rs1,"rs2 = %d "
+                ,rs2,"result = %d",result);
+                
+end
+endmodule
+*/
+///////////////////////////////////////
+module IF_ID_buffer(instructionIn , instructionOut , CS);
+input [31:0]instructionIn;
+output reg [31:0]instructionOut;
+input CS;
+
+always@(negedge CS)
+ begin
+  instructionOut = instructionIn ;
+ end
+endmodule
+//////////////////////////////////////module ControlUnit(opcodeIn , RegW , RegR , WB , MemW,
+                      Ex1 , Ex2 , MemR , opcodeOut, CS);
+input [2:0]opcodeIn;
+output reg RegW;
+output reg RegR;
+output reg WB;
+output reg MemW;
+output reg[4:0] Ex1;
+output reg[4:0] Ex2;
+output reg MemR;
+output reg[2:0]opcodeOut;
+input CS;
+
+always@(negedge CS)
+ begin
+ 
+ // + 
+if(opcodeIn == 3'b000)
+begin
+Ex1 = 5'b01000;
+Ex2 = 5'b00000;
+RegR = 1;
+RegW = 1;
+MemR = 0;
+MemW = 0;
+WB = 1;
+opcodeOut = opcodeIn;
+end
+
+// - 
+else if(opcodeIn == 3'b001)
+begin
+Ex1 = 5'b01001;
+Ex2 = 5'b10001;
+RegR = 1;
+RegW = 1;
+MemR = 0;
+MemW = 0;
+WB = 1;
+opcodeOut = opcodeIn;
+end
+
+// x
+else if(opcodeIn == 3'b010)
+begin
+Ex1 = 5'b00010;
+Ex2 = 5'b01010;
+RegR = 1;
+RegW = 1;
+MemR = 0;
+MemW = 0;
+WB = 1;
+opcodeOut = opcodeIn;
+end
+
+// dividion
+else if(opcodeIn == 3'b011)
+begin
+Ex1 = 5'b01011;
+Ex2 = 5'b01011;
+RegR = 1;
+RegW = 1;
+MemR = 0;
+MemW = 0;
+WB = 1;
+opcodeOut = opcodeIn;
+end
+
+// aload
+else if(opcodeIn == 3'b100)
+begin
+Ex1 = 5'b10100;
+Ex2 = 5'b00100;
+RegR = 1;
+RegW = 1;
+MemR = 1;
+MemW = 0;
+WB = 0;
+opcodeOut = opcodeIn;
+end
+
+// store
+else if(opcodeIn == 3'b101)
+begin
+Ex1 = 5'b10101;
+Ex2 = 5'b00101;
+RegR = 1;
+RegW = 0;
+MemR = 0;
+MemW = 1;
+WB = 0;
+opcodeOut = opcodeIn;
+end
+
+ end
+endmodule
+///////////////////////////////////////
+/*
+module ControlUnitTest();
+reg [2:0]opcodeIn;
+wire RegW;
+wire RegR;
+wire WB;
+wire MemW;
+wire[4:0] Ex1;
+wire[4:0] Ex2;
+wire MemR;
+wire[2:0]opcodeOut;
+reg CS;
+
+always #1 CS =~CS;
+ControlUnit testing(opcodeIn , RegW , RegR , WB , MemW,
+                      Ex1 , Ex2 , MemR , opcodeOut, CS);
+
+initial begin
+  CS = 0;
+  opcodeIn = 000;
+  #5 // addition
+$display("opcodeOut = %b ",opcodeOut,"RegW = %b " ,RegW,"RegR = %b "
+,RegR,"WB = %b ",WB,"MemR = %b " ,MemR,"MemW = %b ",MemW,"Ex1 = %b ",Ex1,"Ex2 = %b \n",Ex2);
+
+opcodeIn = 001;
+  #5 // sub
+$display("opcodeOut = %b ",opcodeOut,"RegW = %b " ,RegW,"RegR = %b "
+,RegR,"WB = %b ",WB,"MemR = %b " ,MemR,"MemW = %b ",MemW,"Ex1 = %b ",Ex1,"Ex2 = %b \n",Ex2);
+
+opcodeIn = 010;
+  #5 // multiplication
+$display("opcodeOut = %b ",opcodeOut,"RegW = %b " ,RegW,"RegR = %b "
+,RegR,"WB = %b ",WB,"MemR = %b " ,MemR,"MemW = %b ",MemW,"Ex1 = %b ",Ex1,"Ex2 = %b \n",Ex2);
+
+opcodeIn = 011;
+  #5 // division
+$display("opcodeOut = %b ",opcodeOut,"RegW = %b " ,RegW,"RegR = %b "
+,RegR,"WB = %b ",WB,"MemR = %b " ,MemR,"MemW = %b ",MemW,"Ex1 = %b ",Ex1,"Ex2 = %b \n",Ex2);
+
+opcodeIn = 100;
+  #5 // load
+$display("opcodeOut = %b ",opcodeOut,"RegW = %b " ,RegW,"RegR = %b "
+,RegR,"WB = %b ",WB,"MemR = %b " ,MemR,"MemW = %b ",MemW,"Ex1 = %b ",Ex1,"Ex2 = %b \n",Ex2);
+  
+  opcodeIn = 101;
+  #5 // store
+$display("opcodeOut = %b ",opcodeOut,"RegW = %b " ,RegW,"RegR = %b "
+,RegR,"WB = %b ",WB,"MemR = %b " ,MemR,"MemW = %b ",MemW,"Ex1 = %b ",Ex1,"Ex2 = %b \n",Ex2);
+  
+end
+endmodule
+*/
+////////////////////////////////////////////////////
+module ID_Ex1_buffer(rs1 , rs2 , rd , WB , Ex1 , Ex2 , MemR ,
+MemW , RegR , RegW , CS , rs1out , rs2out , rdout , WBout , Ex1out , Ex2out , MemRout , MemWout , RegRout , RegWout);
+
+input [31:0]rs1;
+input [31:0]rs2;
+input [2:0]rd;
+input [2:0]Ex1;
+input [2:0]Ex2;
+input RegR;
+input RegW;
+input MemW;
+input MemR;
+input WB;
+input CS;
+output reg [31:0]rs1out;
+output reg [31:0]rs2out;
+output reg [2:0]rdout;
+output reg [2:0]Ex1out;
+output reg [2:0]Ex2out;
+output reg RegRout;
+output reg RegWout;
+output reg MemWout;
+output reg MemRout;
+output reg WBout;
+
+always@(negedge CS)
+ begin
+ rs1out = rs1;
+ rs2out = rs2;
+ rdout = rd;
+ Ex1out = Ex1;
+ Ex2out = Ex2;
+ RegRout = RegR;
+ RegWout = RegW;
+ MemWout = MemW;
+ MemRout = MemR;
+ WBout = WB;
+ end
+endmodule
+///////////////////////////////////////
+/*
+module ID_Ex1_buffer_tst();
+reg [31:0]rs1;
+reg [31:0]rs2;
+reg [2:0]rd;
+reg [2:0]Ex1;
+reg [2:0]Ex2;
+reg RegR;
+reg RegW;
+reg MemW;
+reg MemR;
+reg WB;
+reg CS;
+wire [31:0]rs1out;
+wire [31:0]rs2out;
+wire [2:0]rdout;
+wire [2:0]Ex1out;
+wire [2:0]Ex2out;
+wire RegRout;
+wire RegWout;
+wire MemWout;
+wire MemRout;
+wire WBout;
+
+always #5 CS =~CS;
+ID_Ex1_buffer tst(rs1 , rs2 , rd , WB , Ex1 , Ex2 , MemR ,
+MemW , RegR , RegW , CS , rs1out , rs2out , rdout , WBout , Ex1out , Ex2out , MemRout , MemWout , RegRout , RegWout);
+initial begin
+CS = 0;
+rs1 = 32'b0010111001;
+rs2 = 32'b0000011011;
+rd = 3'b001;
+Ex1 = 3'b110;
+Ex2 = 3'b010;
+RegR = 0;
+RegW = 1;
+MemW = 1;
+MemR = 0;
+WB = 1;
+#5
+$display("rs1out = %b \n",rs1out,"RegWout = %b " ,RegWout,"RegRout = %b " ,RegRout,"WBout = %b ",WBout,"MemRout = %b \n" ,MemRout,"MemWout = %b ",MemWout,"Ex1out = %b ",Ex1out,"Ex2out = %b \n",Ex2out);
+end
+endmodule
+*/
+///////////////////////////////////////
+module MUX_1(input_0 , input_1 , FW_signal , passedResult ,CS);
+input [31:0]input_0;
+input [31:0]input_1;
+input FW_signal;
+input CS;
+output reg[31:0]passedResult;
+
+  always @(negedge CS)
+    begin
+     if(FW_signal == 0) passedResult = input_0;
+     else if(FW_signal == 1) passedResult = input_1;
+    end
+endmodule
+///////////////////////////////////////
+/*
+module MUX1TST();
+reg [31:0]input_0;
+reg [31:0]input_1;
+reg FW_signal;
+reg CS;
+wire[31:0]passedResult;
+
+always #5 CS =~CS;
+MUX_1 TST(input_0 , input_1 , FW_signal , passedResult ,CS);
+
+initial begin
+CS = 0;
+
+FW_signal = 1;
+input_0 = 32'h00000000;
+input_1 = 32'hffffffff;
+#5
+$display("FW_signal = %b \n",FW_signal,"input_0 = %h \n" ,input_0,"input_1 = %h \n" ,input_1,"passedResult = %h \n",passedResult);
+
+FW_signal = 0;
+input_0 = 32'hfbac000;
+input_1 = 32'h001fff0;
+#10
+$display("FW_signal = %b \n",FW_signal,"input_0 = %h \n" ,input_0,"input_1 = %h \n" ,input_1,"passedResult = %h \n",passedResult);
+end
+endmodule
+*/
+///////////////////////////////////////
+module MUX_2(input_0 , input_1 , input_2 , FW_signal , passedResult ,CS);
+input [31:0]input_0;
+input [31:0]input_1;
+input [31:0]input_2;
+input [1:0]FW_signal;
+input CS;
+output reg[31:0]passedResult;
+
+  always @(negedge CS)
+   begin
+    case (FW_signal)
+      2'b00: passedResult = input_0;
+      2'b01: passedResult = input_1;
+      2'b10: passedResult = input_2;
+      default: passedResult = 32'hx;
+    endcase
+  end
+endmodule
+///////////////////////////////////////
+/*
+module MUX2TST();
+reg [31:0]input_0;
+reg [31:0]input_1;
+reg [31:0]input_2;
+reg[1:0]FW_signal;
+reg CS;
+wire[31:0]passedResult;
+
+always #5 CS =~CS;
+MUX_2 TST(input_0 , input_1 , input_2 , FW_signal , passedResult ,CS);
+
+initial begin
+CS = 0;
+
+FW_signal = 2'b10;
+input_0 = 32'h00000000;
+input_1 = 32'hffffffff;
+input_2 = 32'h11111111;
+#10
+$display("FW_signal = %b \n",FW_signal,"input_0 = %h \n" ,input_0,"input_1 = %h \n" ,input_1,"input_2 = %h \n" ,input_2,"passedResult = %h \n",passedResult);
+
+FW_signal = 2'b00;
+input_0 = 32'h12345678;
+input_1 = 32'h00025630;
+input_2 = 32'h55555555;
+#10
+$display("FW_signal = %b \n",FW_signal,"input_0 = %h \n" ,input_0,"input_1 = %h \n" ,input_1,"input_2 = %h \n" ,input_2,"passedResult = %h \n",passedResult);
+
+FW_signal = 2'b01;
+input_0 = 32'h00000000;
+input_1 = 32'hffffffff;
+input_2 = 32'h11111111;
+#10
+$display("FW_signal = %b \n",FW_signal,"input_0 = %h \n" ,input_0,"input_1 = %h \n" ,input_1,"input_2 = %h \n" ,input_2,"passedResult = %h \n",passedResult);
+
+FW_signal = 2'b10;
+input_0 = 32'h00000000;
+input_1 = 32'hffffffff;
+input_2 = 32'h5566852;
+#10
+$display("FW_signal = %b \n",FW_signal,"input_0 = %h \n" ,input_0,"input_1 = %h \n" ,input_1,"input_2 = %h \n" ,input_2,"passedResult = %h \n",passedResult);
+end
+endmodule
+*/
+///////////////////////////////////////
+module immG( CS, extend, extended );
+input[2:0] extend;
+input CS;
+output[31:0] extended;
+
+reg[31:0] extended;
+wire[2:0] extend;
+
+always@(negedge CS)
+begin
+    extended[2:0] = extend[2:0];
+    extended[31:3] = 0;
+end
+endmodule
+//////////////////////////////////////////
+/*
+module testImmG();
+reg [2:0]extend;
+wire [31:0]extended;
+reg CS;
+
+always #1 CS =~CS;
+immG testing(CS, extend, extended);
+
+initial begin
+CS = 0 ;
+extend = 7;
+#5
+$display("extend = %b ",extend,"extended binary = %b " ,extended);
+end
+endmodule
+*/
+///////////////////////////////////////
+module Mem_WB_buffer(result , rd , WB , rdout , CS , resultOut , WBout ,RegW, RegWout);
+
+input [31:0]result;
+input [2:0]rd;
+input WB;
+input RegW;
+input CS;
+
+output reg [31:0]resultOut;
+output reg [2:0]rdout;
+output reg RegWout;
+output reg WBout;
+
+
+always@(negedge CS)
+ begin
+ resultOut = result;
+ rdout = rd;
+ RegWout = RegW;
+ WBout = WB;
+ end
+endmodule
+///////////////////////////////////////
+/*
+module Mem_WB_buffer_tst();
+
+reg [31:0]result;
+reg [2:0]rd;
+reg RegW;
+reg WB;
+reg CS;
+
+wire [31:0]resultOut;
+wire [2:0]rdout;
+wire RegWout;
+wire WBout;
+
+
+always #5 CS =~CS;
+Mem_WB_buffer tst(result , rd , WB , rdout , CS , resultOut , WBout ,RegW, RegWout);
+initial begin
+CS = 0;
+result = 32'b0010111001;
+RegW = 1;
+rd = 3'b001;
+WB = 1;
+#5
+$display("result = %b \n",result,"resultOut = %b \n" ,resultOut,"rd = %b " ,rd,"rdout = %b ",rdout,"WB = %b " ,WB,"WBout = %b \n",WBout,"RegW = %b ",RegW,,"RegWout = %b ",RegWout);
+end
+endmodule
+*/
+///////////////////////////////////////
+module Ex1_Ex2_buffer( rs1 , rs2 , rd ,resultin, WB  , MemR ,
+MemW , CS  , rs1out , rs2out , rdout ,resultout, WBout , MemRout , MemWout);
+
+input [31:0]rs1;
+input [31:0]rs2;
+input [2:0]rd;
+input [31:0]resultin;
+input MemW;
+input MemR;
+input WB;
+input CS;
+output reg [31:0]rs1out;
+output reg [31:0]rs2out;
+output reg [2:0]rdout;
+output reg [31:0]resultout;
+output reg MemWout;
+output reg MemRout;
+output reg WBout;
+
+always@(negedge CS)
+ begin
+ rs1out = rs1;
+ rs2out = rs2;
+ rdout = rd;
+ resultout=resultin;
+ MemWout = MemW;
+ MemRout = MemR;
+ WBout = WB;
+ end
+endmodule
+///////////////////////////////////////
+/*
+module Ex1_Ex2_buffer_tst();
+reg [31:0]rs1;
+reg [31:0]rs2;
+reg [2:0]rd;
+reg [31:0]resultin;
+reg MemW;
+reg MemR;
+reg WB;
+reg CS;
+wire [31:0]rs1out;
+wire [31:0]rs2out;
+wire [2:0]rdout;
+wire [31:0]resultout;
+wire MemWout;
+wire MemRout;
+wire WBout;
+
+
+always #5 CS =~CS;
+Ex1_Ex2_buffer tst( rs1 , rs2 , rd ,resultin, WB  , MemR ,
+MemW , CS  ,rs1out , rs2out , rdout ,resultout, WBout , MemRout , MemWout);
+
+initial begin
+CS = 0;
+
+rs1 = 32'b0001001100;
+rs2 = 32'b0000011011;
+rd = 3'b001;
+resultin=32'b000001000;
+MemW = 1;
+MemR = 0;
+WB = 1;
+#5
+$display("rs1 = %b \n",rs1,"rs2 = %b \n",rs2 ,"rs2out = %b \n",rs2out,"WB = %b \n",WB , "WBout = %b \n",WBout,"MemR = %b \n" ,MemR ,"MemRout = %b \n" ,MemRout,"MemW = %b \n" , MemW ,"MemWout = %b \n" , MemWout , "resultin=%b \n" , resultin , "Result=%b \n",resultout);
+end
+endmodule
+*/
+///////////////////////////////////////
+module Ex2_Mem_buffer( rs2 , rd ,resultin, WB  , MemR ,
+MemW , RegR , RegW , CS  , rs2out , rdout ,resultout, WBout , MemRout , MemWout , RegRout , RegWout);
+
+
+input [31:0]rs2;
+input [2:0]rd;
+input [31:0]resultin;
+input RegR;
+input RegW;
+input MemW;
+input MemR;
+input WB;
+input CS;
+output reg [31:0]rs2out;
+output reg [2:0]rdout;
+output reg [31:0]resultout;
+output reg RegRout;
+output reg RegWout;
+output reg MemWout;
+output reg MemRout;
+output reg WBout;
+
+always@(negedge CS)
+ begin
+ rs2out = rs2;
+ rdout = rd;
+ RegRout = RegR;
+ resultout=resultin;
+ RegWout = RegW;
+ MemWout = MemW;
+ MemRout = MemR;
+ WBout = WB;
+ end
+endmodule
+///////////////////////////////////////
+/*
+module Ex2_Mem_buffer_tst();
+reg [31:0]rs2;
+reg [2:0]rd;
+reg [31:0]resultin;
+
+reg RegR;
+reg RegW;
+reg MemW;
+reg MemR;
+reg WB;
+reg CS;
+
+wire [31:0]rs2out;
+wire [2:0]rdout;
+wire [31:0]resultout;
+wire RegRout;
+wire RegWout;
+wire MemWout;
+wire MemRout;
+wire WBout;
+
+always #5 CS =~CS;
+Ex2_Mem_buffer tst( rs2 , rd ,resultin, WB  , MemR ,
+MemW , RegR , RegW , CS  , rs2out , rdout ,resultout, WBout  , MemRout , MemWout , RegRout , RegWout);
+initial begin
+CS = 0;
+
+rs2 = 32'b0000011011;
+rd = 3'b001;
+resultin=32'b000001000;
+RegR = 0;
+RegW = 1;
+MemW = 1;
+MemR = 0;
+WB = 1;
+#5
+$display("rs2 = %b \n",rs2 ,"rs2out = %b \n",rs2out,"RegWout = %b \n" ,RegWout,"RegRout = %b \n" ,RegRout,"WBout = %b \n",WBout,"MemRout = %b \n" ,MemRout,"MemWout = %b \n",MemWout,"resultin=%b \n" ,resultin ,"Result=%b \n",resultout);
+end
+endmodule
+*/
+///////////////////////////////////////
+module MUX_3(ResultEx1 , ResultEx2 , comparedSignal , passedResult ,CS);
+input [31:0]ResultEx1;
+input [31:0]ResultEx2;
+input comparedSignal;
+input CS;
+output reg[31:0]passedResult;
+
+  always @(negedge CS)
+    begin
+     if(comparedSignal == 0) passedResult = ResultEx1;
+     else if(comparedSignal == 1) passedResult = ResultEx2;
+    end
+endmodule
+///////////////////////////////////////
+/*
+module MUX3TST();
+reg [31:0]ResultEx1;
+reg [31:0]ResultEx2;
+reg comparedSignal;
+reg CS;
+wire[31:0]passedResult;
+
+always #5 CS =~CS;
+MUX_3 test(ResultEx1 , ResultEx2 , comparedSignal , passedResult ,CS);
+initial begin
+CS = 0;
+
+comparedSignal = 1;
+ResultEx1 = 32'hfbac000;
+ResultEx2 = 32'h001fff0;
+#10
+$display("comparedSignal = %b \n",comparedSignal,"ResultEx1 = %h \n" ,ResultEx1,"ResultEx2 = %h \n" ,ResultEx2,"passedResult = %h \n",passedResult);
+
+comparedSignal = 0;
+ResultEx1 = 32'hfbac000;
+ResultEx2 = 32'h001fff0;
+#10
+$display("comparedSignal = %b \n",comparedSignal,"ResultEx1 = %h \n" ,ResultEx1,"ResultEx2 = %h \n" ,ResultEx2,"passedResult = %h \n",passedResult);;
+end
+endmodule
+*/
+///////////////////////////////////////
+module MUX_4(ResultEx , ResultMem , WBSignal , passedResult ,CS);
+input [31:0]ResultEx;
+input [31:0]ResultMem;
+input WBSignal;
+input CS;
+output reg[31:0]passedResult;
+
+  always @(negedge CS)
+    begin
+     if(WBSignal == 0) passedResult = ResultEx;
+     else if(WBSignal == 1) passedResult = ResultMem;
+    end
+endmodule
+///////////////////////////////////////
+/*
+module MUX3TST();
+reg [31:0]ResultEx;
+reg [31:0]ResultMem;
+reg WBSignal;
+reg CS;
+wire[31:0]passedResult;
+
+always #5 CS =~CS;
+MUX_4 test(ResultEx , ResultMem , WBSignal , passedResult ,CS);
+
+initial begin
+CS = 0;
+
+WBSignal = 0;
+ResultEx = 32'hfbac000;
+ResultMem = 32'h001fff0;
+#10
+$display("WBSignal = %b \n",WBSignal,"ResultEx = %h \n" ,ResultEx,"ResultMem = %h \n" ,ResultMem,"passedResult = %h \n",passedResult);
+
+WBSignal = 1;
+ResultEx = 32'hfbac000;
+ResultMem = 32'h001fff0;
+#10
+$display("WBSignal = %b \n",WBSignal,"ResultEx = %h \n" ,ResultEx,"ResultMem = %h \n" ,ResultMem,"passedResult = %h \n",passedResult);
+end
+endmodule
+*/
+///////////////////////////////////////
+/*
+module Forwarding_Unit(input [3:0] ID_EXE_RegisterRs,
+                       input [3:0] ID_EXE_RegisterRt, 
+                       input [3:0] EX_WB_Rd, 
+                       input EX_WB_regwrite,
+                       output reg ForwardA,  
+                       output reg [1:0] ForwardB);
+  always @(*) begin
+    ForwardA = 1'b0;
+    ForwardB = 1'b0;
+    
+    if ((EX_WB_regwrite == 1'b1) && (EX_WB_Rd!=0)&&(EX_WB_Rd==  ID_EXE_RegisterRs))begin
+      ForwardA = 1'b1;end
+     
+    if ((EX_WB_regwrite == 1'b1) && (EX_WB_Rd!=0)&&(EX_WB_Rd== ID_EXE_RegisterRt))begin
+      ForwardB = 1'b1;end
+       
+   
+  end
+
+endmodule*/
+/////////////////////////
+module register(input CS,
+               input [2:0]Rs, // add1
+               input [2:0]Rs2,// add2
+               input [2:0]Rd, // add3
+               input [31:0] Rd_data, //write_data
+               input WriteEnable, //memwrite
+               output reg[31:0] Rs2_data,//read_data
+               output reg[31:0] Rs_data, //read_data
+               output reg[2:0] Rd_out);
+               
+  reg[31:0] register[7:0];
+  
+initial begin
+  register[0] <= 32'h00000000;
+  register[1] <= 32'h00000011;
+  register[2] <= 32'h00001111;
+  register[3] <= 32'h00000000;
+  register[4] <= 32'h11011110;
+  register[5] <= 32'h10010110;
+  register[6] <= 32'h00000000;
+  register[7] <= 32'h11011110;
+  
+end
+  
+  integer i;
+  always @(negedge CS)
+    begin
+       Rs2_data = 0;
+       Rs_data = 0;
+      if(WriteEnable==1'b1)
+        register[Rd] = Rd_data;
+      else
+        begin
+         Rs_data = register[Rs]; 
+         Rs2_data = register[Rs2];
+         Rd_out = Rd;
+        //read_data=rom[addr];
+        end
+    end  
+    
+    endmodule
+///////////////////////////////////////////////////////////
+/*
+module testbench;
+
+reg CS;
+reg [2:0]Rs; // add1
+reg [2:0]Rs2;// add2
+reg [2:0]Rd; // add3
+reg [31:0] Rd_data; //write_data
+reg WriteEnable; //memwrite
+wire[31:0] Rs2_data;//read_data
+wire[31:0] Rs_data; //read_data
+wire[2:0] Rd_out;
+
+
+always #3 CS =~CS;
+  register
+  t(CS,Rs,Rs2,Rd,Rd_data,WriteEnable,Rs2_data,Rs_data,Rd_out);
+              
+
+initial begin
+  CS=0;
+
+Rs = 1;
+Rs2 = 7;
+Rd = 7;
+$display("read values of rs1 and rs2 and pass rd number");
+WriteEnable = 0;
+ #10;
+  
+  $display("Rs = %d " ,Rs," Rs_data = %d \n",Rs_data,"Rs2 = %d ",Rs2,"Rs2_data = %d \n",Rs2_data,"Rd = %d \n",Rd,"Rd_out = %d\n",Rd_out);
+  
+Rs = 1;
+Rs2 = 7;
+Rd = 7;
+Rd_data = 32'b000011;
+WriteEnable = 1;
+ #10;
+ $display("write the value (3) in rd (rd = 7)");
+  //$display("Rs = %d " ,Rs," Rs_data = %d \n",Rs_data,"Rs2 = %d "//,Rs2,"Rs2_data = %d \n",(
+  $display("Rd = %d \n",Rd  , "Rd_data = %d \n", Rd_data );
+  
+Rs = 7;
+Rs2 = 1;
+Rd = 2;
+$display("to make sure the value of x7 was updated");  
+WriteEnable = 0;
+ #10;
+  
+  $display("Rs = %d " ,Rs," Rs_data = %d \n",Rs_data,"Rs2 = %d ",Rs2,"Rs2_data = %d \n",Rs2_data,"Rd = %d \n",Rd,"Rd_out = %d\n",Rd_out);
+ end 
+ endmodule
+ */
+///////////////////////////////////////
+module Ex1( input1 , input2 , rs2 , resultPrime , Ex2Signal , CS , Finalresult );
+input [31:0]input1;
+input [31:0]input2;
+input [31:0]resultPrime;
+output reg [31:0]Finalresult;
+output reg [31:0]rs2;
+input [4:0]Ex2Signal;
+input CS;
+
+always@(negedge CS)
+ begin
+
+ //signal (10000) == addition
+ if(Ex2Signal == 5'b10000) 
+    Finalresult <= resultPrime;
+  
+  //signal (10001) == sub
+  else if(Ex2Signal == 5'b10001 )
+     begin
+       Finalresult =~ resultPrime + 1;
+     end
+  
+  //signal (10010) == mul        
+  else if(Ex2Signal == 5'b10010)  
+   begin
+  Finalresult <= input1 * input2;
+   end
+   
+   //signal (01011) == div
+  else if(Ex2Signal == 5'b01011)  
+    begin
+     Finalresult <= input1 * resultPrime;
+    end
+        rs2 = input2; 
+ end
+endmodule
+
+///////////////////////////////////////
+/*
+module Ex1Test();
+ 
+reg [31:0]input1;
+reg [31:0]input2;
+reg [31:0]resultPrime;
+wire [31:0]Finalresult;
+wire [31:0]rs2;
+reg [4:0]Ex2Signal;
+reg CS;
+
+always #5 CS =~CS;
+Ex1 Trying(input1 , input2 , rs2 , resultPrime , Ex2Signal , CS , Finalresult );
+
+initial begin
+  CS = 0;
+  input1 = 12;
+  input2 = 12;
+  resultPrime = 1000;
+  Ex2Signal = 5'b10000; // addition
+   #10
+  $display("addition rs1 + rs2 :\n","input1 = %d \n",input1,"input2 = %d \n" ,input2,"Ex2Signal = %b\n" ,Ex2Signal ,"resultPrime = %d \n" , resultPrime , "Finalresult = %d",Finalresult);
+ $display("rs2 = %d  \n" , rs2);
+
+  input1 = 10;
+  input2 = 2;
+  resultPrime = 10;
+  Ex2Signal = 10001; // sub rs1 > rs2
+   #10
+ $display("sub rs1 - rs2 :\n","input1 = %d \n",input1,"input2 = %d \n" ,input2,"Ex2Signal = %b\n" ,Ex2Signal ,"resultPrime = %d \n" , resultPrime , "Finalresult = %d",Finalresult);
+ $display("rs2 = %d  \n" , rs2);
+ 
+  input1 = 2;
+  input2 = 10;
+  resultPrime = 4294967288;
+  Ex2Signal = 10001; // sub{rs2 > rs1
+   #10
+ $display("sub rs2 - rs1 :\n","input1 = %d \n",input1,"input2 = %d \n" ,input2,"Ex2Signal = %b\n" ,Ex2Signal ,"resultPrime = %d \n" , resultPrime , "Finalresult = %d",Finalresult);
+ $display("rs2 = %d  \n" , rs2);
+  
+  input1 = 4;
+  input2 = 3;
+  resultPrime = 526;
+  Ex2Signal = 5'b10010; // mul
+   #10
+ $display("multiplication: \n","input1 = %d \n",input1,"input2 = %d \n" ,input2,"Ex2Signal = %b\n" ,Ex2Signal ,"resultPrime = %d \n" , resultPrime ,"Finalresult = %d",Finalresult);
+ $display("rs2 = %d  \n" , rs2);
+ 
+  input1 = 10;
+  input2 = 5;
+  resultPrime = 200;
+  Ex2Signal = 5'b01011; // div
+   #10
+  $display("division: \n","input1 = %d \n",input1,"input2 = %d \n" ,input2,"Ex2Signal = %b\n" ,Ex2Signal ,"resultPrime = %d \n" , resultPrime ,"Finalresult = %d ",Finalresult);
+  $display("rs2 = %d  \n" , rs2);
+
+  end
+endmodule*/
+///////////////////////////////////////
+module Ex2( input1 , input2 , rs2 , resultPrime , Ex2Signal , CS , Finalresult );
+input [31:0]input1;
+input [31:0]input2;
+input [31:0]resultPrime;
+output reg [31:0]Finalresult;
+output reg [31:0]rs2;
+input [4:0]Ex2Signal;
+input CS;
+
+always@(negedge CS)
+ begin
+
+ //signal (10000) == addition
+ if(Ex2Signal == 5'b10000) 
+    Finalresult <= resultPrime;
+  
+  //signal (10001) == sub
+  else if(Ex2Signal == 5'b10001 )
+     begin
+       Finalresult =~ resultPrime + 1;
+     end
+  
+  //signal (10010) == mul        
+  else if(Ex2Signal == 5'b10010)  
+   begin
+  Finalresult <= input1 * input2;
+   end
+   
+   //signal (01011) == div
+  else if(Ex2Signal == 5'b01011)  
+    begin
+     Finalresult <= input1 * resultPrime;
+    end
+        rs2 = input2; 
+ end
+endmodule
+
+//////////////////////////////////////
+/*module Ex2Test();
+ 
+reg [31:0]input1;
+reg [31:0]input2;
+reg [31:0]resultPrime;
+wire [31:0]Finalresult;
+wire [31:0]rs2;
+reg [4:0]Ex2Signal;
+reg CS;
+
+always #5 CS =~CS;
+Ex1 Trying(input1 , input2 , rs2 , resultPrime , Ex2Signal , CS , Finalresult );
+
+initial begin
+  CS = 0;
+  input1 = 12;
+  input2 = 12;
+  resultPrime = 1000;
+  Ex2Signal = 5'b10000; // addition
+   #10
+  $display("addition rs1 + rs2 :\n","input1 = %d \n",input1,"input2 = %d \n" ,input2,"Ex2Signal = %b\n" ,Ex2Signal ,"resultPrime = %d \n" , resultPrime , "Finalresult = %d",Finalresult);
+ $display("rs2 = %d  \n" , rs2);
+
+  input1 = 10;
+  input2 = 2;
+  resultPrime = 10;
+  Ex2Signal = 10001; // sub rs1 > rs2
+   #10
+ $display("sub rs1 - rs2 :\n","input1 = %d \n",input1,"input2 = %d \n" ,input2,"Ex2Signal = %b\n" ,Ex2Signal ,"resultPrime = %d \n" , resultPrime , "Finalresult = %d",Finalresult);
+ $display("rs2 = %d  \n" , rs2);
+ 
+  input1 = 2;
+  input2 = 10;
+  resultPrime = 4294967288;
+  Ex2Signal = 10001; // sub{rs2 > rs1
+   #10
+ $display("sub rs2 - rs1 :\n","input1 = %d \n",input1,"input2 = %d \n" ,input2,"Ex2Signal = %b\n" ,Ex2Signal ,"resultPrime = %d \n" , resultPrime , "Finalresult = %d",Finalresult);
+ $display("rs2 = %d  \n" , rs2);
+  
+  input1 = 4;
+  input2 = 3;
+  resultPrime = 526;
+  Ex2Signal = 5'b10010; // mul
+   #10
+ $display("multiplication: \n","input1 = %d \n",input1,"input2 = %d \n" ,input2,"Ex2Signal = %b\n" ,Ex2Signal ,"resultPrime = %d \n" , resultPrime ,"Finalresult = %d",Finalresult);
+ $display("rs2 = %d  \n" , rs2);
+ 
+  input1 = 10;
+  input2 = 5;
+  resultPrime = 200;
+  Ex2Signal = 5'b01011; // div
+   #10
+  $display("division: \n","input1 = %d \n",input1,"input2 = %d \n" ,input2,"Ex2Signal = %b\n" ,Ex2Signal ,"resultPrime = %d \n" , resultPrime ,"Finalresult = %d ",Finalresult);
+  $display("rs2 = %d  \n" , rs2);
+
+  end
+endmodule*/
+///////////////////////////////////////
